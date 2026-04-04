@@ -16,8 +16,37 @@ def create_app():
 
     register_routes(app)
 
-    @app.route("/health")
-    def health():
-        return jsonify(status="ok")
+    # --- Error Handlers (last-resort safety net) ---
+
+    @app.errorhandler(400)
+    def bad_request(e):
+        return jsonify({
+            "error": str(e.description) if hasattr(e, "description") else "Bad request",
+            "code": 400,
+        }), 400
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify({"error": "Not found", "code": 404}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify({"error": "Method not allowed", "code": 405}), 405
+
+    @app.errorhandler(409)
+    def conflict(e):
+        return jsonify({
+            "error": "Conflict — resource already exists",
+            "code": 409,
+        }), 409
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return jsonify({"error": "Internal server error", "code": 500}), 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(e):
+        app.logger.error(f"Unhandled: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error", "code": 500}), 500
 
     return app
