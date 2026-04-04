@@ -293,3 +293,128 @@ def test_create_with_missing_short_code_returns_field_error(client):
     )
     assert r.status_code == 201
     assert "short_code" in r.get_json()["data"]
+
+
+# ── REDIRECT TESTS ────────────────────────────────────────────────────
+
+
+def test_redirect_active_url(client, sample):
+    r = client.get(f"/r/{sample.short_code}")
+    assert r.status_code == 302
+
+
+def test_redirect_inactive_url(client, inactive_url):
+    r = client.get(f"/r/{inactive_url.short_code}")
+    assert r.status_code == 410
+    data = r.get_json()
+    assert "error" in data
+
+
+def test_redirect_nonexistent_code(client):
+    r = client.get("/r/DOES_NOT_EXIST")
+    assert r.status_code == 404
+    assert "error" in r.get_json()
+
+
+# ── ADDITIONAL COVERAGE TESTS ─────────────────────────────────────────
+
+
+def test_filter_by_user_id(client):
+    client.post(
+        "/urls",
+        json={
+            "user_id": 42,
+            "short_code": "usr42a",
+            "original_url": "https://example.com",
+            "title": "User 42",
+        },
+    )
+    r = client.get("/urls?user_id=42")
+    data = r.get_json()
+    assert data["count"] >= 1
+    assert all(item["user_id"] == 42 for item in data["data"])
+
+
+def test_filter_by_invalid_user_id(client):
+    r = client.get("/urls?user_id=not-a-number")
+    assert r.status_code == 200
+
+
+def test_update_no_body(client, sample):
+    r = client.put(
+        f"/urls/{sample.id}",
+        data="not json",
+        content_type="application/json",
+    )
+    assert r.status_code == 400
+
+
+def test_update_empty_short_code(client, sample):
+    r = client.put(f"/urls/{sample.id}", json={"short_code": ""})
+    assert r.status_code == 400
+
+
+def test_update_empty_original_url(client, sample):
+    r = client.put(f"/urls/{sample.id}", json={"original_url": ""})
+    assert r.status_code == 400
+
+
+def test_update_empty_title(client, sample):
+    r = client.put(f"/urls/{sample.id}", json={"title": ""})
+    assert r.status_code == 400
+
+
+def test_update_user_id_field(client, sample):
+    r = client.put(f"/urls/{sample.id}", json={"user_id": 99})
+    assert r.status_code == 200
+    assert r.get_json()["data"]["user_id"] == 99
+
+
+def test_update_is_active(client, sample):
+    r = client.put(f"/urls/{sample.id}", json={"is_active": False})
+    assert r.status_code == 200
+    assert r.get_json()["data"]["is_active"] is False
+
+
+def test_url_safe_get(app):
+    from app.models.url import Url
+    url = Url.create(
+        user_id=1,
+        short_code="safe01",
+        original_url="https://example.com",
+        title="Safe Get",
+        is_active=True,
+    )
+    assert Url.safe_get(url.id) is not None
+    assert Url.safe_get(999999) is None
+    assert Url.safe_get("abc") is None
+
+
+def test_user_safe_get(app):
+    from app.models.user import User
+    user = User.create(username="safeget1", email="safeget@test.com")
+    assert User.safe_get(user.id) is not None
+    assert User.safe_get(999999) is None
+    assert User.safe_get("abc") is None
+
+
+def test_update_duplicate_short_code(client, sample):
+    # Create a second URL
+    client.post(
+        "/urls",
+        json={
+            "user_id": 1,
+            "short_code": "unique99",
+            "original_url": "https://other.com",
+            "title": "Other",
+        },
+    )
+    # Try to update sample to have the same short_code as the second URL
+    r = client.put(f"/urls/{sample.id}", json={"short_code": "unique99"})
+    assert r.status_code == 409
+
+
+def test_delete_string_id(client):
+    r = client.delete("/urls/not-an-id")
+    assert r.status_code == 404
+

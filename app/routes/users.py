@@ -94,7 +94,7 @@ def list_users():
             
         users = list(query)
         data = [_user_to_dict(u) for u in users]
-        return jsonify(data), 200
+        return jsonify({"data": data, "count": len(data)}), 200
     except (OperationalError, DatabaseError) as e:
         current_app.logger.error(f"DB error: {e}")
         return jsonify({"error": "Database unavailable", "code": 503}), 503

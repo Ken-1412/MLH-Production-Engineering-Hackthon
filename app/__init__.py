@@ -29,10 +29,7 @@ def create_app():
 
     @app.errorhandler(400)
     def bad_request(e):
-        return jsonify({
-            "error": str(e.description) if hasattr(e, "description") else "Bad request",
-            "code": 400,
-        }), 400
+        return jsonify({"error": getattr(e, 'description', 'Bad request'), "code": 400}), 400
 
     @app.errorhandler(404)
     def not_found(e):
@@ -44,10 +41,7 @@ def create_app():
 
     @app.errorhandler(409)
     def conflict(e):
-        return jsonify({
-            "error": "Conflict — resource already exists",
-            "code": 409,
-        }), 409
+        return jsonify({"error": "Conflict", "code": 409}), 409
 
     @app.errorhandler(500)
     def server_error(e):
@@ -55,7 +49,7 @@ def create_app():
 
     @app.errorhandler(Exception)
     def unhandled_exception(e):
-        app.logger.error(f"Unhandled: {e}", exc_info=True)
+        app.logger.error(f"Unhandled exception: {e}", exc_info=True)
         return jsonify({"error": "Internal server error", "code": 500}), 500
 
     return app

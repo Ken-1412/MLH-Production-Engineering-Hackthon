@@ -11,9 +11,11 @@ os.environ["DATABASE_PASSWORD"] = "postgres"
 
 from app import create_app  # noqa: E402
 from app.database import db  # noqa: E402
-from app.models.url import Url
-from app.models.user import User
+from app.models.url import Url  # noqa: E402
+from app.models.user import User  # noqa: E402
 from app.models.event import Event  # noqa: E402
+
+MODELS = [Event, Url, User]  # drop order: children before parents
 
 
 @pytest.fixture(scope="function")
@@ -21,9 +23,9 @@ def app():
     application = create_app()
     application.config["TESTING"] = True
     with application.app_context():
-        db.create_tables([Url, User, Event], safe=True)
+        db.create_tables(MODELS, safe=True)
         yield application
-        db.drop_tables([Url, User, Event], safe=True)
+        db.drop_tables(MODELS, safe=True)
 
 
 @pytest.fixture(scope="function")
@@ -32,12 +34,42 @@ def client(app):
 
 
 @pytest.fixture(scope="function")
+def sample_user(app):
+    return User.create(
+        username="fixture_user_x7k",
+        email="fixture_x7k@test.com"
+    )
+
+
+@pytest.fixture(scope="function")
 def sample(app):
-    """One valid record for use in GET/PUT/DELETE tests."""
+    """One valid Url record for use in GET/PUT/DELETE tests."""
     return Url.create(
         user_id=1,
         short_code="TEST01",
         original_url="https://example.com/test",
         title="Test URL",
         is_active=True,
+    )
+
+
+@pytest.fixture(scope="function")
+def sample_url(app, sample_user):
+    return Url.create(
+        user_id=sample_user.id,
+        short_code="fixturecd1",
+        original_url="https://example.com",
+        title="Fixture URL",
+        is_active=True
+    )
+
+
+@pytest.fixture(scope="function")
+def inactive_url(app, sample_user):
+    return Url.create(
+        user_id=sample_user.id,
+        short_code="inactivex1",
+        original_url="https://example.com",
+        title="Inactive URL",
+        is_active=False
     )

@@ -35,8 +35,7 @@ def list_events():
     try:
         events = list(Event.select().order_by(Event.id))
         data = [_event_to_dict(e) for e in events]
-        # Evaluator expects direct array response
-        return jsonify(data), 200
+        return jsonify({"data": data, "count": len(data)}), 200
     except (OperationalError, DatabaseError) as e:
         current_app.logger.error(f"DB error: {e}")
         return jsonify({"error": "Database unavailable", "code": 503}), 503

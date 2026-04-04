@@ -13,9 +13,6 @@ build/
 # Environment variables
 .env
 
-# uv
-uv.lock
-
 # IDE
 .vscode/
 .idea/
@@ -23,12 +20,17 @@ uv.lock
 *.swo
 *~
 
-# pytest
+# pytest / coverage
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+test_results.txt
+test_output.txt
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Judging (not visible to participants)
+# Judging
 judging/

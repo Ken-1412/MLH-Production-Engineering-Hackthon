@@ -3,6 +3,7 @@ import string
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
+from flask import redirect as flask_redirect
 from peewee import DatabaseError, IntegrityError, OperationalError
 from playhouse.shortcuts import model_to_dict
 
@@ -183,3 +184,16 @@ def delete_url(record_id):
     except (OperationalError, DatabaseError) as e:
         current_app.logger.error(f"DB error: {e}")
         return jsonify({"error": "Database unavailable", "code": 503}), 503
+
+
+@urls_bp.route("/r/<string:short_code>")
+def redirect_url(short_code):
+    """Redirect to the original URL if active, 410 if inactive, 404 if not found."""
+    try:
+        url = Url.get(Url.short_code == short_code)
+    except Url.DoesNotExist:
+        return jsonify({"error": "Not found", "code": 404}), 404
+    if not url.is_active:
+        return jsonify({"error": "URL has been deactivated", "code": 410}), 410
+    return flask_redirect(url.original_url, code=302)
+
