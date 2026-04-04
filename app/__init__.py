@@ -13,6 +13,15 @@ def create_app():
     init_db(app)
 
     from app import models  # noqa: F401 - registers models with Peewee
+    from app.database import db
+    from app.models.url import Url
+    from app.models.user import User
+    from app.models.event import Event
+    
+    try:
+        db.create_tables([Url, User, Event], safe=True)
+    except Exception as e:
+        app.logger.warning(f"Could not create tables on startup: {e}")
 
     register_routes(app)
 
