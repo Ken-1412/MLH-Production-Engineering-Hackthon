@@ -1,0 +1,32 @@
+groups:
+- name: HackathonAlerts
+  rules:
+  - alert: HighErrorRate
+    expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+    for: 1m
+    labels:
+      severity: critical
+      team: backend
+    annotations:
+      summary: "High 5xx error rate detected"
+      description: "More than 5% of requests over the last 5 minutes resulted in a 5xx error."
+
+  - alert: HighLatency
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+    for: 2m
+    labels:
+      severity: warning
+      team: backend
+    annotations:
+      summary: "High p95 Latency"
+      description: "p95 latency is > 500ms for the last 2 minutes."
+
+  - alert: DatabaseDown
+    expr: up{job="postgres"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      team: dba
+    annotations:
+      summary: "PostgreSQL Database is down"
+      description: "The database service is unreachable or failing health checks."

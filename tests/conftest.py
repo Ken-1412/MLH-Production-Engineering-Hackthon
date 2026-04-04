@@ -11,7 +11,9 @@ os.environ["DATABASE_PASSWORD"] = "postgres"
 
 from app import create_app  # noqa: E402
 from app.database import db  # noqa: E402
-from app.models.url import Url  # noqa: E402
+from app.models.url import Url
+from app.models.user import User
+from app.models.event import Event  # noqa: E402
 
 
 @pytest.fixture(scope="function")
@@ -19,9 +21,9 @@ def app():
     application = create_app()
     application.config["TESTING"] = True
     with application.app_context():
-        db.create_tables([Url], safe=True)
+        db.create_tables([Url, User, Event], safe=True)
         yield application
-        db.drop_tables([Url], safe=True)
+        db.drop_tables([Url, User, Event], safe=True)
 
 
 @pytest.fixture(scope="function")

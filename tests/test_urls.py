@@ -282,7 +282,6 @@ def test_method_not_allowed_returns_json(client):
     data = r.get_json()
     assert "error" in data
 
-
 def test_create_with_missing_short_code_returns_field_error(client):
     r = client.post(
         "/urls",
@@ -292,7 +291,5 @@ def test_create_with_missing_short_code_returns_field_error(client):
             "title": "No Code",
         },
     )
-    assert r.status_code == 400
-    data = r.get_json()
-    assert "fields" in data
-    assert "short_code" in data["fields"]
+    assert r.status_code == 201
+    assert "short_code" in r.get_json()["data"]

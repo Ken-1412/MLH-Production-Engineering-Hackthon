@@ -1,3 +1,5 @@
+import random
+import string
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
@@ -9,11 +11,13 @@ from app.models.url import Url
 urls_bp = Blueprint("urls", __name__)
 
 
+def generate_short_code(length=6):
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
 def _validate_create(data):
     """Validate required fields for creating a URL."""
     errors = {}
-    if not data.get("short_code"):
-        errors["short_code"] = "required"
     if not data.get("original_url"):
         errors["original_url"] = "required"
     if not data.get("title"):
@@ -65,11 +69,17 @@ def list_urls():
     """List all URLs, with optional search filtering."""
     try:
         search = request.args.get("search", "").strip()
+        user_id = request.args.get("user_id")
         query = Url.select()
         if search:
             query = query.where(
                 (Url.title.contains(search)) | (Url.original_url.contains(search))
             )
+        if user_id:
+            try:
+                query = query.where(Url.user_id == int(user_id))
+            except ValueError:
+                pass
         urls = list(query.order_by(Url.id))
         data = [_url_to_dict(u) for u in urls]
         return jsonify({"data": data, "count": len(data)}), 200
@@ -83,7 +93,7 @@ def create_url():
     """Create a new URL."""
     data = request.get_json(silent=True)
     if data is None:
-        return jsonify({"error": "Request body must be valid JSON", "code": 400}), 400
+        return jsonify({"error": "Request body must be valid JSON", "fields": {"body": "required"}, "code": 400}), 400
 
     errors = _validate_create(data)
     if errors:
@@ -92,10 +102,14 @@ def create_url():
             400,
         )
 
+    short_code = data.get("short_code")
+    if not short_code:
+        short_code = generate_short_code()
+
     try:
         record = Url.create(
             user_id=int(data["user_id"]),
-            short_code=data["short_code"],
+            short_code=short_code,
             original_url=data["original_url"],
             title=data["title"],
             is_active=data.get("is_active", True),
@@ -128,7 +142,7 @@ def update_url(record_id):
 
     data = request.get_json(silent=True)
     if data is None:
-        return jsonify({"error": "Request body must be valid JSON", "code": 400}), 400
+        return jsonify({"error": "Request body must be valid JSON", "fields": {"body": "required"}, "code": 400}), 400
 
     errors = _validate_update(data)
     if errors:
