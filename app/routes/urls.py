@@ -1,3 +1,4 @@
+import json as json_lib
 import random
 import string
 from datetime import datetime
@@ -7,7 +8,9 @@ from flask import redirect as flask_redirect
 from peewee import DatabaseError, IntegrityError, OperationalError
 from playhouse.shortcuts import model_to_dict
 
+from app.models.event import Event
 from app.models.url import Url
+from app.models.user import User
 
 urls_bp = Blueprint("urls", __name__)
 
@@ -21,15 +24,26 @@ def _validate_create(data):
     errors = {}
     if not data.get("original_url"):
         errors["original_url"] = "required"
+    elif not str(data["original_url"]).startswith(("http://", "https://")):
+        errors["original_url"] = "must start with http:// or https://"
+
     if not data.get("title"):
         errors["title"] = "required"
+
     if "user_id" not in data or data["user_id"] is None:
         errors["user_id"] = "required"
-    elif not isinstance(data["user_id"], (int, float)):
+    else:
         try:
-            int(data["user_id"])
+            uid = int(data["user_id"])
+            if User.safe_get(uid) is None:
+                errors["user_id"] = f"user {uid} does not exist"
         except (ValueError, TypeError):
             errors["user_id"] = "must be an integer"
+
+    if "short_code" in data and data["short_code"] is not None:
+        if not str(data["short_code"]).strip():
+            errors["short_code"] = "must be non-empty if provided"
+
     if "is_active" in data and not isinstance(data["is_active"], bool):
         errors["is_active"] = "must be a boolean"
     return errors
@@ -193,7 +207,24 @@ def redirect_url(short_code):
         url = Url.get(Url.short_code == short_code)
     except Url.DoesNotExist:
         return jsonify({"error": "Not found", "code": 404}), 404
+
     if not url.is_active:
         return jsonify({"error": "URL has been deactivated", "code": 410}), 410
-    return flask_redirect(url.original_url, code=302)
 
+    # Step 3: Log the click event — HINT 2
+    try:
+        Event.create(
+            url_id=url.id,
+            user_id=url.user_id,
+            event_type="clicked",
+            timestamp=datetime.now(),
+            details=json_lib.dumps({
+                "short_code": url.short_code,
+                "original_url": url.original_url
+            })
+        )
+    except Exception as e:
+        # Log but do not block the redirect if event insert fails
+        current_app.logger.error(f"Event log failed: {e}")
+
+    return flask_redirect(url.original_url, code=302)

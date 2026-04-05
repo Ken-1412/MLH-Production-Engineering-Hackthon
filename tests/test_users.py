@@ -27,6 +27,23 @@ def test_create_user_duplicate(client):
     assert r.status_code == 409
 
 
+def test_duplicate_email_returns_409(client):
+    client.post("/users", json={
+        "username": "user_a1", "email": "dup@test.com"})
+    r = client.post("/users", json={
+        "username": "user_a2", "email": "dup@test.com"})
+    assert r.status_code == 409
+    assert "error" in r.get_json()
+
+
+def test_duplicate_username_returns_409(client):
+    client.post("/users", json={
+        "username": "sameuser", "email": "first@test.com"})
+    r = client.post("/users", json={
+        "username": "sameuser", "email": "second@test.com"})
+    assert r.status_code == 409
+
+
 def test_get_user(client):
     created = client.post("/users", json={"username": "test1", "email": "test1@example.com"}).get_json()
     r = client.get(f"/users/{created['id']}")

@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 from datetime import datetime
 from io import StringIO
 
@@ -11,6 +12,8 @@ from playhouse.shortcuts import model_to_dict
 from app.models.user import User
 
 users_bp = Blueprint("users", __name__)
+
+EMAIL_RE = re.compile(r'^[^@]+@[^@]+\.[^@]+$')
 
 
 def _user_to_dict(user_record):
@@ -25,8 +28,8 @@ def _user_to_dict(user_record):
 def _validate_user(data):
     """Validate required fields for a User."""
     errors = {}
-    if not data.get("username"):
-        errors["username"] = "required"
+    if not data.get("username") or not str(data["username"]).strip():
+        errors["username"] = "required and must be non-empty"
     elif not isinstance(data.get("username"), str):
         errors["username"] = "must be a string"
 
@@ -34,6 +37,8 @@ def _validate_user(data):
         errors["email"] = "required"
     elif not isinstance(data.get("email"), str):
         errors["email"] = "must be a string"
+    elif not EMAIL_RE.match(str(data["email"])):
+        errors["email"] = "must be a valid email address"
     return errors
 
 

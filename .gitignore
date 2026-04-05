@@ -13,14 +13,7 @@ build/
 # Environment variables
 .env
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# pytest / coverage
+# pytest and coverage artifacts
 .pytest_cache/
 .coverage
 coverage.xml
@@ -28,9 +21,21 @@ htmlcov/
 test_results.txt
 test_output.txt
 
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # OS
 .DS_Store
 Thumbs.db
+*.db
+run_output.txt
+null
+test_db_conn.py
 
 # Judging
+# Judging (not visible to participants)
 judging/
